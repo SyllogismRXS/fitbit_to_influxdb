@@ -1,20 +1,25 @@
+import re
 import json
 
 from fitbit_to_influxdb.utils import make_influx_safe, get_date_from_string_with_zone
 from fitbit_to_influxdb.utils import get_unix_time_seconds
 
-def heart_rate_line_2(user, heart_rate, timestamp):
-    return f"heart_rate_fine,user={user} heart_rate={heart_rate}i {timestamp}"
+def line_protocol_intraday(name, user, value, date, time_24):
+    unix_time = get_unix_time_seconds(date, time_24)
+    return f"{name}_intra,user={user} {name}={value} {unix_time}"
 
-def heart_rate_line(date, time_24, user, heart_rate):
-    return heart_rate_line_2(user, heart_rate, get_unix_time_seconds(date, time_24))
+#def line_protocol(name, date, time_24, user, heart_rate):
+#    return heart_rate_line_2(user, heart_rate, get_unix_time_seconds(date, time_24))
 
-def write_activities_heart(db_client, profile, file_path):
+def write_intraday_activities(file_name, db_client, profile, file_path):
     with open(file_path) as f:
-        heart = json.load(f)
+        json_data = json.load(f)
 
-    header = heart['activities-heart']
-    heart_rate_data = heart['activities-heart-intraday']['dataset']
+    # Get the name of the activity from the json file
+    name = re.search(r'activities-(.*).json', file_name).group(1)
+
+    header = json_data['activities-%s' % name]
+    data = json_data['activities-%s-intraday' % name]['dataset']
 
     time_zone_string = profile['user']['timezone']
     date_string = header[0]['dateTime']
@@ -22,8 +27,8 @@ def write_activities_heart(db_client, profile, file_path):
 
     date = get_date_from_string_with_zone(time_zone_string, date_string)
 
-    data = [ heart_rate_line(date, data_point['time'], user, data_point['value'])
-             for data_point in heart_rate_data ]
+    lines = [ line_protocol_intraday(name, user, data_point['value'], date, data_point['time'])
+              for data_point in data ]
 
-    if not db_client.write_points(data, time_precision='s', batch_size=10000, protocol='line'):
+    if not db_client.write_points(lines, time_precision='s', batch_size=10000, protocol='line'):
         print('Failed to write to database.')
