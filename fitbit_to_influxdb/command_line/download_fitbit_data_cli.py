@@ -6,7 +6,8 @@ from pathlib import Path
 from datetime import datetime
 
 from fitbit_to_influxdb.gather_keys_oauth2 import authorize
-from fitbit_to_influxdb.fitbit_client import FitbitClient
+from fitbit_to_influxdb.download_fitbit_data import download_fitbit_data
+from fitbit_to_influxdb.utils import get_date_from_string
 
 def re_authorize_and_save(settings, ephemeral_path):
     token = authorize(settings['client_id'], settings['client_secret'])
@@ -18,8 +19,9 @@ def re_authorize_and_save(settings, ephemeral_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--settings', default='settings.yaml', help='Path to persistent settings file.')
-    parser.add_argument('--save_dir', default='data', help='Directory to save fitbit data.')
+    parser.add_argument('-s', '--settings', default='settings.yaml', help='Path to persistent settings file.')
+    parser.add_argument('-o', '--save_dir', default='data', help='Directory to save fitbit data.')
+    parser.add_argument('-d', '--date', default=None, help='The date to download in the format: 2020-05-25')
     args = parser.parse_args()
 
     # Load the persistent settings file
@@ -40,7 +42,12 @@ def main():
     if datetime.now() > datetime.fromtimestamp(ephemeral['expires_at']):
         ephemeral = re_authorize_and_save(settings, ephemeral_path)
 
-    client = FitbitClient(settings, ephemeral, os.path.abspath(args.save_dir))
+    if args.date is None:
+        date = datetime.today()
+    else:
+        date = get_date_from_string(args.date)
+
+    download_fitbit_data(settings, ephemeral, date, os.path.abspath(args.save_dir))
 
 if __name__ == "__main__":
     sys.exit(main())

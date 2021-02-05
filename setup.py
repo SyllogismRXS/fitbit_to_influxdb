@@ -18,7 +18,8 @@ setup(name='fitbit_to_influxdb',
       ],
       entry_points = {
           'console_scripts': ['fitbit_to_influxdb_server=fitbit_to_influxdb.command_line.server:main',
-                              'fitbit_to_influxdb=fitbit_to_influxdb.command_line.fitbit_to_influxdb:main',
-                              'authorize_oath2=fitbit_to_influxdb.command_line.authorize_oath2:main'],
+                              'download_fitbit_data=fitbit_to_influxdb.command_line.download_fitbit_data_cli:main',
+                              'authorize_oath2=fitbit_to_influxdb.command_line.authorize_oath2:main',
+                              'write_to_influxdb=fitbit_to_influxdb.command_line.write_to_influxdb_cli:main'],
       },
       zip_safe=False)
